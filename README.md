@@ -1,6 +1,6 @@
-# LLM LogMind
+# LLM LogOps
 
-LLM LogMind is a focused, local-first repository for **collecting, normalizing, and analyzing security and platform logs** using a combination of PowerShell tooling and local or self‑hosted LLMs.
+LLM LogOps is a focused, local-first repository for **collecting, normalizing, and analyzing security and platform logs** using a combination of PowerShell tooling and local or self‑hosted LLMs.
 
 The goal is **not** to hard‑code every analytic rule up front, but to:
 
