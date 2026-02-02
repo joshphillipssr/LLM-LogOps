@@ -12,6 +12,16 @@ This repo is intentionally separated from application or infrastructure code to 
 
 ---
 
+## ⚠️ Security Notice
+
+This repository works with **real production security logs** containing sensitive data. Before contributing or running scripts:
+
+- Read [SECURITY.md](SECURITY.md) for data protection guidelines
+- Never commit `.env` files or report outputs (`reports/**/*.json`)
+- Use `.env.example` as a template; obtain credentials from Azure Portal
+
+---
+
 ## Design Philosophy
 
 ### 1. LLM‑Assisted Analysis First
