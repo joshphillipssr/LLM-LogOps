@@ -1,9 +1,6 @@
 # Ollama JSON Analysis Script
 # Submits analysis_input JSON to Ollama and captures structured LLM output
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
-
 param(
   [Parameter(Mandatory = $true)]
   [string]$InputPath,
@@ -17,6 +14,9 @@ param(
   [Parameter(Mandatory = $false)]
   [string]$OutDir = "reports/analysis"
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 # Resolve paths
 $InputPath = Resolve-Path -Path $InputPath -ErrorAction Stop
