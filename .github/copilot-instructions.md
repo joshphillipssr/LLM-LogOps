@@ -1,23 +1,37 @@
-# Copilot instructions (CFHDITA-Logging)
+# Copilot Instructions (LLM-LogOps)
 
-## What this repo is
+## Repository Structure
+
+- **LLM-LogOps** (public): Code, scripts, docs, templates
+- **LMM-LogOps-Data** (private): All collected logs and analysis outputs
+
+All data is stored in the separate private repository to keep sensitive information out of the public repo.
+
+## What This Repo Is
+
 - Local-first PowerShell tooling to **collect + lightly normalize** security/platform logs, then emit **LLM-friendly JSON**.
 - Current implemented collector: Entra ID sign-in logs via Microsoft Graph in [scripts/entra-signin-logs.ps1](../scripts/entra-signin-logs.ps1).
+- **Data outputs go to LMM-LogOps-Data** — never stored in this public repo.
 
-## How the Entra sign-in collector works
+## How the Entra Sign-in Collector Works
+
 - Loads secrets from a repo-root `.env` file (required): `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`.
 - Uses OAuth2 client credentials to get a Graph token, then queries:
   - `GET https://graph.microsoft.com/v1.0/auditLogs/signIns?$filter=createdDateTime ge <start> and createdDateTime lt <end>`
   - Handles pagination via `@odata.nextLink`.
 - Default time window is **last 60 minutes** (UTC).
+- **Outputs to `../LMM-LogOps-Data/reports/entra-signins/`** (private data repo)
 
-## Running locally
+## Running Locally
+
 - Use PowerShell 7+ (`pwsh`), especially on macOS/Linux.
+- Ensure **LMM-LogOps-Data is cloned** as a sibling directory
 - Run the collector:
   - `pwsh -File scripts/entra-signin-logs.ps1`
-- Expected artifacts are written under [reports/entra-signins](../reports/entra-signins):
+- Expected artifacts are written to **`../LMM-LogOps-Data/reports/entra-signins/`** (private data repo):
   - `raw_<yyyyMMdd_HHmmZ>.json` (full Graph records, minimal transforms)
   - `summary_<yyyyMMdd_HHmmZ>.json` (counts + window)
+  - `analysis_input_<yyyyMMdd_HHmmZ>.json` (aggregations + heuristics + bounded samples)
   - `analysis_input_<yyyyMMdd_HHmmZ>.json` (aggregations + heuristics + bounded samples)
 
 ## Conventions to follow when editing/adding collectors

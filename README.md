@@ -134,39 +134,80 @@ Example (high‑level):
 
 ---
 
-## LLM Analysis Workflow
+## 📦 Data Storage Architecture
+
+**This repo is code + documentation only.** All collected log data is stored in a separate **private repository**: [LMM-LogOps-Data](https://github.com/joshphillipssr/LMM-LogOps-Data)
+
+```
+LLM-LogOps (public)         →  Scripts, docs, analysis tools
+                            ↓
+                       Outputs data to
+                            ↓
+LMM-LogOps-Data (private)   →  reports/, analysis files
+```
+
+### Why Separate Repos?
+
+1. **Security** — Real logs never appear in public code
+2. **Clarity** — Clear separation of code vs. data
+3. **Flexibility** — Data repo can be rotated/archived independently
+4. **Access control** — Different teams for code vs. sensitive data
+
+### Expected Directory Structure
+
+```
+# In LMM-LogOps-Data:
+reports/
+├─ entra-signins/
+│  ├─ raw_<yyyyMMdd_HHmmZ>.json          # Full Graph API response
+│  ├─ summary_<yyyyMMdd_HHmmZ>.json      # Metadata + counts
+│  └─ analysis_input_<yyyyMMdd_HHmmZ>.json # LLM-ready aggregations
+├─ analysis/
+│  ├─ <timestamp>_<model>_ollama.json
+│  └─ <timestamp>_<model>_metadata.json
+└─ comparisons/
+   └─ <timestamp>_compare_*.json
+```
+
+**See [LMM-LogOps-Data README](https://github.com/joshphillipssr/LMM-LogOps-Data) for detailed structure and security guidelines.**
+
+---
 
 ### Overview
 
-This repo now includes a complete workflow for **comparing analysis outputs from multiple LLM models**:
+This repo includes a complete workflow for **comparing analysis outputs from multiple LLM models**:
 
-1. **Collect logs** → `analysis_input_<timestamp>.json`
-2. **Run through Ollama** (or other models) → JSON analysis output
+1. **Collect logs** → artifacts in `LMM-LogOps-Data/reports/entra-signins/`
+2. **Run through Ollama** → analysis output in `LMM-LogOps-Data/reports/analysis/`
 3. **Compare outputs** → detect differences, hallucinations, blind spots
 4. **Evaluate with rubric** → score clarity, correctness, evidence, hallucination risk
 
 ### Step 1: Run Log Collector
 
-Generate the analysis input packet:
+Generate the analysis input packet (outputs to private data repo):
 
 ```bash
+cd /Users/josh/Projects/LLM-LogOps
 pwsh -File scripts/entra-signin-logs.ps1
-# Outputs: reports/entra-signins/analysis_input_<timestamp>.json
+# Outputs to: ../LMM-LogOps-Data/reports/entra-signins/
+#   - raw_<timestamp>.json (12 KB)
+#   - summary_<timestamp>.json (< 1 KB)
+#   - analysis_input_<timestamp>.json (50-100 KB)
 ```
 
 ### Step 2: Analyze with Ollama
 
-Submit the packet to a local Ollama instance (e.g., running on Neo or localhost):
+Submit the analysis input to a local Ollama instance:
 
 ```bash
 pwsh -File scripts/analyze-json-ollama.ps1 `
-  -InputPath reports/entra-signins/analysis_input_<timestamp>.json `
-  -OllamaBaseUrl 'http://<neo-hostname>:11434' `
+  -InputPath ../LMM-LogOps-Data/reports/entra-signins/analysis_input_<timestamp>.json `
+  -OllamaBaseUrl 'http://localhost:11434' `
   -Model 'gpt-oss:20b' `
-  -OutDir reports/analysis
-# Outputs:
-#   reports/analysis/<timestamp>_gpt-oss_20b_ollama.json
-#   reports/analysis/<timestamp>_gpt-oss_20b_metadata.json
+  -OutDir ../LMM-LogOps-Data/reports/analysis
+# Outputs to: ../LMM-LogOps-Data/reports/analysis/
+#   - <timestamp>_gpt-oss_20b_ollama.json (analysis results)
+#   - <timestamp>_gpt-oss_20b_metadata.json (metadata + timing)
 ```
 
 **Supported Ollama models:**
@@ -178,18 +219,18 @@ pwsh -File scripts/analyze-json-ollama.ps1 `
 
 **Parameters:**
 
-- `-InputPath`: Path to `analysis_input_*.json` (required)
+- `-InputPath`: Path to `analysis_input_*.json` in data repo (required)
 - `-OllamaBaseUrl`: Ollama HTTP endpoint (default: `http://localhost:11434`)
 - `-Model`: Model name in Ollama (default: `gpt-oss:20b`)
-- `-OutDir`: Output directory for analysis + metadata files (default: `reports/analysis`)
+- `-OutDir`: Output directory in data repo (default: `../LMM-LogOps-Data/reports/analysis`)
 
 ### Step 3 (Optional): Run Analysis with Continue/Copilot
 
 Manually ask VS Code Copilot or Continue.dev to analyze the same packet:
 
-1. Open the `analysis_input_<timestamp>.json` file
+1. Open `../LMM-LogOps-Data/reports/entra-signins/analysis_input_<timestamp>.json`
 2. Tell Copilot/Continue: "Analyze this Entra ID sign-in log packet and return JSON matching this schema: [paste schema from docs/prompts/log-analysis.prompt.md]"
-3. Save output to `reports/analysis/<timestamp>_<model-name>.json`
+3. Save output to `../LMM-LogOps-Data/reports/analysis/<timestamp>_<model-name>.json`
 
 ### Step 4: Compare Analysis Outputs
 
@@ -197,8 +238,8 @@ Run the comparison script against 2+ analysis files:
 
 ```bash
 pwsh -File scripts/compare-analysis.ps1 `
-  reports/analysis/20260202_1632Z_gpt-oss_ollama.json `
-  reports/analysis/20260202_1635Z_copilot_response.json
+  ../LMM-LogOps-Data/reports/analysis/20260202_1632Z_gpt-oss_ollama.json `
+  ../LMM-LogOps-Data/reports/analysis/20260202_1635Z_copilot_response.json
 # Output: Side-by-side comparison, hallucination detection, summary diffs
 ```
 
@@ -242,26 +283,50 @@ The script automatically injects this prompt as the system message and passes th
 pwsh -File scripts/entra-signin-logs.ps1
 # → reports/entra-signins/analysis_input_20260202_1632Z.json
 
-# 2. Analyze with Ollama (Neo at 192.168.1.10)
+# 2. Analyze with Ollama
 pwsh -File scripts/analyze-json-ollama.ps1 `
-  -InputPath reports/entra-signins/analysis_input_20260202_1632Z.json `
-  -OllamaBaseUrl 'http://192.168.1.10:11434' `
+  -InputPath ../LMM-LogOps-Data/reports/entra-signins/analysis_input_20260202_1632Z.json `
+  -OllamaBaseUrl 'http://localhost:11434' `
   -Model 'gpt-oss:20b'
-# → reports/analysis/20260202_1632Z_gpt-oss_ollama.json
-# → reports/analysis/20260202_1632Z_gpt-oss_metadata.json
+# → ../LMM-LogOps-Data/reports/analysis/20260202_1632Z_gpt-oss_ollama.json
+# → ../LMM-LogOps-Data/reports/analysis/20260202_1632Z_gpt-oss_metadata.json
 
 # 3. (Optionally) Get Copilot analysis via Continue
 # ... paste JSON + schema into Continue sidebar, save output ...
-# → reports/analysis/20260202_1635Z_copilot_response.json
+# → ../LMM-LogOps-Data/reports/analysis/20260202_1635Z_copilot_response.json
 
 # 4. Compare the two
 pwsh -File scripts/compare-analysis.ps1 `
-  reports/analysis/20260202_1632Z_gpt-oss_ollama.json `
-  reports/analysis/20260202_1635Z_copilot_response.json
+  ../LMM-LogOps-Data/reports/analysis/20260202_1632Z_gpt-oss_ollama.json `
+  ../LMM-LogOps-Data/reports/analysis/20260202_1635Z_copilot_response.json
 
 # 5. Score using the rubric
 # Open docs/analysis-rubric.md and manually score each model on the 6 dimensions
 ```
+
+---
+
+## Repository Organization
+
+### LLM-LogOps (Public - This Repo)
+
+Contains:
+- PowerShell scripts for log collection and analysis
+- LLM prompt templates and analysis rubric
+- Documentation and guides
+- Security policies and best practices
+
+**No data files** — all logs stored in private data repo
+
+### LMM-LogOps-Data (Private)
+
+Contains:
+- Raw Entra ID sign-in logs (`raw_*.json`)
+- Aggregated analysis inputs (`analysis_input_*.json`)
+- LLM analysis outputs (`*_ollama.json`, `*_copilot.json`, etc.)
+- Comparison outputs and metadata
+
+See [LMM-LogOps-Data README](https://github.com/joshphillipssr/LMM-LogOps-Data) for full details.
 
 ---
 
@@ -275,8 +340,9 @@ This repo is designed to pair well with:
 
 For manual ad-hoc analysis:
 
-1. Run collector script
-2. Review / spot‑check JSON output
+1. Run collector script (outputs to data repo)
+2. Review / spot-check JSON output
+
 3. Feed output + context to an LLM
 4. Ask for:
    - Behavioral summaries

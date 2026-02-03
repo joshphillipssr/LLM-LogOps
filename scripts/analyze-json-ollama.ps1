@@ -32,9 +32,9 @@ Write-Host "Model: $Model" -ForegroundColor Cyan
 Write-Host "OutDir: $OutDir" -ForegroundColor Cyan
 
 # --- Load prompt template ---
-$promptTemplatePath = Join-Path $repoRoot 'CFHDITA-Logging/docs/prompts/log-analysis.prompt.md'
+$promptTemplatePath = Join-Path $repoRoot 'docs/prompts/log-analysis.prompt.md'
 if (-not (Test-Path $promptTemplatePath)) {
-  throw "Prompt template not found at $promptTemplatePath"
+  throw "Prompt template not found at $promptTemplatePath. Expected at: $promptTemplatePath"
 }
 
 $promptTemplate = Get-Content -Path $promptTemplatePath -Raw

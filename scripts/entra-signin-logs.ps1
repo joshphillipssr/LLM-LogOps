@@ -243,7 +243,14 @@ $analysisInput = [ordered]@{
 }
 
 # --- Output raw + summary (POC) ---
-$outDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'reports/entra-signins'
+# Outputs to LMM-LogOps-Data (separate private repository)
+# Ensure LMM-LogOps-Data exists as a sibling directory
+$dataRepoPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'LMM-LogOps-Data'
+if (-not (Test-Path $dataRepoPath)) {
+  throw "LMM-LogOps-Data repository not found at $dataRepoPath. Ensure it's cloned as a sibling directory."
+}
+
+$outDir = Join-Path $dataRepoPath 'reports/entra-signins'
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 $ts = Get-Date -Format 'yyyyMMdd_HHmmZ'
@@ -252,4 +259,4 @@ $results | ConvertTo-Json -Depth 10 | Out-File (Join-Path $outDir "raw_$ts.json"
 $summary | ConvertTo-Json -Depth 5  | Out-File (Join-Path $outDir "summary_$ts.json")
 $analysisInput | ConvertTo-Json -Depth 10 | Out-File (Join-Path $outDir "analysis_input_$ts.json")
 
-Write-Host "POC artifacts written to $outDir" -ForegroundColor Green
+Write-Host "Artifacts written to LMM-LogOps-Data: $outDir" -ForegroundColor Green
